@@ -65,7 +65,7 @@ main = do
                         ++ encode (Bind "" "" [] False)
                         ++ encode (Describe 'P' "") ++ encode (Execute "" 0) ++ encode Sync
       Right () <- pgSend (conn db) slowFrame | Left _ => closeDB db >> exitFailure
-      badCancel <- cancelQuery ({ cfg := { tlsCAFile := Just "/nonexistent/idris2-pg-ca.pem" } config } db)
+      badCancel <- cancelQuery ({ cfg := { tlsCAFile := Just "/nonexistent/postgres-ca.pem" } config } db)
       case badCancel of
         Left _ => pure ()
         Right _ => closeDB db >> exitFailure

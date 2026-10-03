@@ -1,14 +1,14 @@
-package idris2-pg-prop-test
+package postgres-prop-test
 version = 0.1.0
 authors = "Odun Adeboye"
 
 -- packages to add to search path
-depends = idris2-pg
+depends = postgres
         , hedgehog
 
 -- main file (i.e. file to load at REPL)
 main = PropTests
 
 -- name of executable
-executable = "idris2-pg-prop-test"
+executable = "postgres-prop-test"
 sourcedir = "src"

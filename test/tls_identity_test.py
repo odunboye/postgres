@@ -13,7 +13,7 @@ import time
 import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
-APP = ROOT / 'test/build/exec/idris2-pg-tls-identity-test_app'
+APP = ROOT / 'test/build/exec/postgres-tls-identity-test_app'
 
 
 def run(args, **kwargs):
@@ -26,7 +26,7 @@ def openssl(directory, *args):
 
 def pki(d):
     openssl(d, 'req', '-x509', '-newkey', 'ec', '-pkeyopt', 'ec_paramgen_curve:P-256',
-            '-nodes', '-keyout', 'root.key', '-out', 'root.pem', '-days', '2', '-subj', '/CN=idris2-pg Test Root',
+            '-nodes', '-keyout', 'root.key', '-out', 'root.pem', '-days', '2', '-subj', '/CN=Postgres Test Root',
             '-addext', 'basicConstraints=critical,CA:TRUE', '-addext', 'keyUsage=critical,keyCertSign,cRLSign')
     openssl(d, 'req', '-x509', '-newkey', 'ec', '-pkeyopt', 'ec_paramgen_curve:P-256', '-nodes',
             '-keyout', 'other.key', '-out', 'other.pem', '-days', '2', '-subj', '/CN=Other Root',
@@ -40,7 +40,7 @@ system_default=defaults
 VerifyCAFile={d/'root.pem'}
 ''')
     openssl(d, 'req', '-new', '-newkey', 'ec', '-pkeyopt', 'ec_paramgen_curve:P-256', '-nodes',
-            '-keyout', 'intermediate.key', '-out', 'intermediate.csr', '-subj', '/CN=idris2-pg Test Intermediate')
+            '-keyout', 'intermediate.key', '-out', 'intermediate.csr', '-subj', '/CN=Postgres Test Intermediate')
     (d/'ca.ext').write_text('basicConstraints=critical,CA:TRUE,pathlen:0\nkeyUsage=critical,keyCertSign,cRLSign\n')
     openssl(d, 'x509', '-req', '-in', 'intermediate.csr', '-CA', 'root.pem', '-CAkey', 'root.key',
             '-CAcreateserial', '-days', '2', '-extfile', 'ca.ext', '-out', 'intermediate.pem')
@@ -96,7 +96,7 @@ def probe(port, host, mode, ca, extra=None):
     if ca is not None: env['PG_TLS_CA'] = str(ca)
     if extra: env.update(extra)
     command = ([sys.executable, str(ROOT/'test/tls_native_probe.py')]
-               if '--native-only' in sys.argv else [str(APP/'idris2-pg-tls-identity-test.so')])
+               if '--native-only' in sys.argv else [str(APP/'postgres-tls-identity-test.so')])
     result = run(command, env=env)
     assert 'PASS' in result.stdout, result.stdout
     return result.stdout

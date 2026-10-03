@@ -109,7 +109,7 @@ int pg_tls_handshake(void *pointer) {
         if (SSL_set1_host(s->ssl, s->host) != 1 ||
             SSL_set_tlsext_host_name(s->ssl, s->host) != 1) return fail(s, "TLS DNS identity");
     }
-    s->method = BIO_meth_new(BIO_TYPE_SOURCE_SINK, "idris2-pg deadline socket");
+    s->method = BIO_meth_new(BIO_TYPE_SOURCE_SINK, "postgres deadline socket");
     if (!s->method || !BIO_meth_set_create(s->method, bio_create) ||
         !BIO_meth_set_destroy(s->method, bio_destroy) ||
         !BIO_meth_set_read(s->method, bio_read) || !BIO_meth_set_write(s->method, bio_write) ||

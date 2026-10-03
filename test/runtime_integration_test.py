@@ -3,9 +3,9 @@ from pathlib import Path
 import os
 import subprocess
 root = Path(__file__).resolve().parents[1]
-app = root / 'test/build/exec/idris2-pg-test_app'
+app = root / 'test/build/exec/postgres-test_app'
 env = dict(os.environ, IDRIS2_INC_SRC=str(app), LD_LIBRARY_PATH=str(app), DYLD_LIBRARY_PATH=str(app))
-result = subprocess.run([str(app / 'idris2-pg-test.so')], env=env,
+result = subprocess.run([str(app / 'postgres-test.so')], env=env,
                         text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=180)
 print(result.stdout, end='')
 assert result.returncode == 0, result.returncode

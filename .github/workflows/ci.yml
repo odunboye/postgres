@@ -14,14 +14,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build idris2-pg
-        run: pack build idris2-pg.ipkg
+      - name: Build postgres
+        run: pack build postgres.ipkg
 
       - name: Build and run unit tests
         working-directory: test
         run: |
           pack build unit-test.ipkg
-          ./build/exec/idris2-pg-unit-test | tee unit-test-output.txt
+          ./build/exec/postgres-unit-test | tee unit-test-output.txt
           ! grep -q '^FAIL' unit-test-output.txt
 
   # Property-based tests (idris2-hedgehog) - round-trip pairs and algebraic
@@ -32,14 +32,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build idris2-pg
-        run: pack build idris2-pg.ipkg
+      - name: Build postgres
+        run: pack build postgres.ipkg
 
       - name: Build and run property-based tests
         working-directory: test
         run: |
           pack build prop-test.ipkg
-          ./build/exec/idris2-pg-prop-test
+          ./build/exec/postgres-prop-test
 
   # End-to-end CRUD smoke test against a real Postgres.
   live-crud-test:
@@ -78,8 +78,8 @@ jobs:
           PGPASSWORD=testpass psql -h postgres -U testuser -d testdb -c "SELECT pg_reload_conf();"
           PGPASSWORD=testpass psql -h postgres -U testuser -d testdb -c "ALTER USER testuser WITH PASSWORD 'testpass';"
 
-      - name: Build idris2-pg
-        run: pack build idris2-pg.ipkg
+      - name: Build postgres
+        run: pack build postgres.ipkg
 
       - name: Build and run the CRUD smoke test
         working-directory: test
@@ -91,7 +91,7 @@ jobs:
           PG_TEST_DB: testdb
         run: |
           pack build test.ipkg
-          ./build/exec/idris2-pg-test | tee crud-test-output.txt
+          ./build/exec/postgres-test | tee crud-test-output.txt
           ! grep -q '^FAIL' crud-test-output.txt
 
   # Same smoke test again, but against Postgres's actual out-of-the-box
@@ -117,8 +117,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build idris2-pg
-        run: pack build idris2-pg.ipkg
+      - name: Build postgres
+        run: pack build postgres.ipkg
 
       - name: Build and run the CRUD smoke test
         working-directory: test
@@ -130,5 +130,5 @@ jobs:
           PG_TEST_DB: testdb
         run: |
           pack build test.ipkg
-          ./build/exec/idris2-pg-test | tee crud-test-output.txt
+          ./build/exec/postgres-test | tee crud-test-output.txt
           ! grep -q '^FAIL' crud-test-output.txt

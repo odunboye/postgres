@@ -1,13 +1,13 @@
-package idris2-pg-unit-test
+package postgres-unit-test
 version = 0.1.0
 authors = "Odun Adeboye"
 
 -- packages to add to search path
-depends = idris2-pg
+depends = postgres
 
 -- main file (i.e. file to load at REPL)
 main = UnitTests
 
 -- name of executable
-executable = "idris2-pg-unit-test"
+executable = "postgres-unit-test"
 sourcedir = "src"

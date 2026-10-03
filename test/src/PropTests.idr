@@ -1,6 +1,6 @@
 module PropTests
 
--- Property-based tests (idris2-hedgehog) for idris2-pg's hand-written
+-- Property-based tests (idris2-hedgehog) for postgres's hand-written
 -- codecs/parsers/crypto - round-trip pairs and algebraic invariants that
 -- should hold for *any* input, complementing test/src/UnitTests.idr's
 -- fixed examples and RFC test vectors. See README.md's testing section.

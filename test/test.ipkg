@@ -1,4 +1,4 @@
-package idris2-pg-test
+package postgres-test
 version = 0.1.0
 authors = "Odun Adeboye"
 -- maintainers =
@@ -13,7 +13,7 @@ authors = "Odun Adeboye"
 -- langversion
 
 -- packages to add to search path
-depends = idris2-pg
+depends = postgres
 
 -- modules to install
 -- modules =
@@ -22,7 +22,7 @@ depends = idris2-pg
 main = Main
 
 -- name of executable
-executable = "idris2-pg-test"
+executable = "postgres-test"
 -- opts =
 sourcedir = "src"
 -- builddir =

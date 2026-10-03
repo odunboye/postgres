@@ -1,6 +1,6 @@
-package idris2-pg-tls-identity-test
+package postgres-tls-identity-test
 version = 0.1.0
-depends = idris2-pg
+depends = postgres
 sourcedir = "src"
 main = TLSIdentityTests
-executable = idris2-pg-tls-identity-test
+executable = postgres-tls-identity-test

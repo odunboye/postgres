@@ -1,10 +1,10 @@
-[custom.all.idris2-pg]
+[custom.all.postgres]
 type = "local"
 path = "."
-ipkg = "idris2-pg.ipkg"
+ipkg = "postgres.ipkg"
 test = "test/test.ipkg"
 
-[custom.all.idris2-pg-test]
+[custom.all.postgres-test]
 type = "local"
 path = "test"
 ipkg = "test.ipkg"
@@ -13,7 +13,7 @@ type = "local"
 path = "../idris2-flux-async"
 ipkg = "flux-async.ipkg"
 
-[custom.all.idris2-pg-async]
+[custom.all.postgres-async]
 type = "local"
 path = "async"
-ipkg = "idris2-pg-async.ipkg"
+ipkg = "postgres-async.ipkg"

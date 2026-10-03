@@ -1,5 +1,5 @@
-package idris2-pg-async
+package postgres-async
 version = 0.1.0
-depends = idris2-pg, flux-async
+depends = postgres, flux-async
 sourcedir = "src"
 modules = Data.PGPool

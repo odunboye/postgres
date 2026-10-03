@@ -1,5 +1,5 @@
-package idris2-pg-tls-deadline-test
-depends = idris2-pg
+package postgres-tls-deadline-test
+depends = postgres
 sourcedir = "src"
 main = TLSDeadlineTests
-executable = idris2-pg-tls-deadline-test
+executable = postgres-tls-deadline-test

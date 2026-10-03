@@ -4,9 +4,9 @@ import os
 import subprocess
 import sys
 root = Path(__file__).resolve().parents[1]
-app = root / 'async/build/exec/idris2-pg-pool-test_app'
+app = root / 'async/build/exec/postgres-pool-test_app'
 env = dict(os.environ, IDRIS2_INC_SRC=str(app), LD_LIBRARY_PATH=str(app), DYLD_LIBRARY_PATH=str(app))
-process = subprocess.Popen([str(app / 'idris2-pg-pool-test.so')], env=env)
+process = subprocess.Popen([str(app / 'postgres-pool-test.so')], env=env)
 try:
     code = process.wait(timeout=12 if '--sample' in sys.argv else 45)
     if code:

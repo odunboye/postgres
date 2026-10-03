@@ -1,5 +1,5 @@
-package idris2-pg-pool-test
-depends = idris2-pg, idris2-pg-async, flux-async
+package postgres-pool-test
+depends = postgres, postgres-async, flux-async
 sourcedir = "src"
 main = PoolTests
-executable = idris2-pg-pool-test
+executable = postgres-pool-test

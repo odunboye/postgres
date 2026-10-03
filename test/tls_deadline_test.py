@@ -41,10 +41,10 @@ exec docker-entrypoint.sh postgres -c ssl=on -c ssl_cert_file=/tmp/tls/server.cr
             raise RuntimeError('disposable TLS database failed to start')
         address = subprocess.check_output(['docker', 'port', name, '5432/tcp'], text=True, timeout=5).strip()
         port = address.rsplit(':', 1)[1]
-        app = ROOT / 'test/build/exec/idris2-pg-tls-deadline-test_app'
+        app = ROOT / 'test/build/exec/postgres-tls-deadline-test_app'
         env = dict(os.environ, PG_TEST_PORT=port, PG_TEST_CA_FILE=str(certs / 'server.crt'), IDRIS2_INC_SRC=str(app),
                    LD_LIBRARY_PATH=str(app), DYLD_LIBRARY_PATH=str(app))
-        subprocess.run([str(app / 'idris2-pg-tls-deadline-test.so')], env=env, check=True, timeout=90)
+        subprocess.run([str(app / 'postgres-tls-deadline-test.so')], env=env, check=True, timeout=90)
     finally:
         if created:
             subprocess.run(['docker', 'rm', '-f', '-v', name], timeout=15, check=True,
