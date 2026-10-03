@@ -5,9 +5,9 @@ authors = "Odun Adeboye"
 license = "MIT"
 brief = "A from-scratch PostgreSQL wire-protocol client (no libpq)"
 readme = "README.md"
-homepage = "https://github.com/odunboye/idris2-postgres"
-sourceloc = "https://github.com/odunboye/idris2-postgres"
-bugtracker = "https://github.com/odunboye/idris2-postgres/issues"
+homepage = "https://github.com/odunboye/postgres"
+sourceloc = "https://github.com/odunboye/postgres"
+bugtracker = "https://github.com/odunboye/postgres/issues"
 
 -- the Idris2 version required (e.g. langversion >= 0.5.1)
 -- langversion

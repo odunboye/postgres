@@ -1,4 +1,4 @@
-# idris2-postgres
+# postgres
 
 A PostgreSQL client for Idris2, implemented from scratch against the
 [Postgres wire protocol](https://www.postgresql.org/docs/current/protocol.html)
@@ -18,7 +18,7 @@ an encode/decode pair proven to round-trip, a connection state machine the
 compiler actually enforces rather than only labels, length-indexed buffers
 that turn a short read or a frame overrun into a type error instead of a
 runtime one, and so on. That work happens on the
-[`verified`](https://github.com/odunboye/idris2-postgres/tree/verified) branch,
+[`verified`](https://github.com/odunboye/postgres/tree/verified) branch,
 and is meant as a demonstration of what dependent types buy you in a real,
 non-toy client for a real wire protocol, not a toy example.
 
