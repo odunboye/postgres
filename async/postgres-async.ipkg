@@ -1,5 +1,5 @@
 package postgres-async
 version = 0.1.0
-depends = postgres, flux-async
+depends = postgres, runtime
 sourcedir = "src"
 modules = Data.PGPool

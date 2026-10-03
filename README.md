@@ -153,8 +153,8 @@ return, as required by the [Chez foreign interface](https://cisco.github.io/Chez
 ### Exclusive connection pooling
 
 The optional `async/postgres-async.ipkg` package exports `Data.PGPool` for
-`flux-async`'s task scheduler (vendored into Flux itself as `flux-runtime`;
-not yet published as its own standalone repo). Defaults are 8 connections,
+[runtime](https://github.com/odunboye/runtime)'s task scheduler (`Async.*`),
+a standalone owned-task runtime also used by Flux itself. Defaults are 8 connections,
 128 queued acquirers, and a 5-second
 acquisition deadline. Connections are opened lazily. Missing transport
 limits become 5 seconds for connection setup and 30 seconds per operation.

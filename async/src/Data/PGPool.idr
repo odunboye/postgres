@@ -1,7 +1,7 @@
 module Data.PGPool
 
 import public Data.PGTypes
-import public Flux.Async.Core
+import public Async.Core
 import Idris2_pg
 import Data.IORef
 import Data.List

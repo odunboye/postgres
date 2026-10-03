@@ -3,7 +3,7 @@ module PoolTests
 import Data.PGPool
 import Idris2_pg
 import Data.PGValue
-import Flux.Async.Runner
+import Async.Runner
 import Data.IORef
 import Data.List
 import System

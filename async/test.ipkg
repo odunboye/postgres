@@ -1,5 +1,5 @@
 package postgres-pool-test
-depends = postgres, postgres-async, flux-async
+depends = postgres, postgres-async, runtime
 sourcedir = "src"
 main = PoolTests
 executable = postgres-pool-test

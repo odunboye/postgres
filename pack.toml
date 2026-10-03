@@ -8,10 +8,10 @@ test = "test/test.ipkg"
 type = "local"
 path = "test"
 ipkg = "test.ipkg"
-[custom.all.flux-async]
+[custom.all.runtime]
 type = "local"
-path = "../idris2-flux-async"
-ipkg = "flux-async.ipkg"
+path = "../runtime"
+ipkg = "runtime.ipkg"
 
 [custom.all.postgres-async]
 type = "local"
