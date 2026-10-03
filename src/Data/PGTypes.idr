@@ -408,17 +408,19 @@ record PGConfig where
   -- If True, connectDB requires the connection to upgrade to TLS (Postgres's
   -- SSLRequest negotiation) and fails outright if the server doesn't
   -- support it - there's no "prefer" mode that falls back to plaintext.
-  -- See Network.TLS's module comment for exactly what this does and
-  -- doesn't protect against (no certificate verification yet).
+  -- Requires TLS 1.3, a trusted certificate chain and SAN host/IP identity.
   useTLS           : Bool
+  -- Nothing uses OpenSSL's system trust; Just selects only this PEM CA file.
+  -- Supplying a CA file with useTLS=False is a configuration error.
+  tlsCAFile        : Maybe String
 
 ||| Convenience constructor for the common case: no timeouts, no TLS - the
 ||| same behavior this client always had. Use the MkPGConfig constructor
 ||| (or record update syntax on a PGConfig it built) directly to set
-||| connectTimeoutMs/readTimeoutMs/useTLS.
+||| connectTimeoutMs/readTimeoutMs/useTLS/tlsCAFile.
 public export
 mkPGConfig : (host : String) -> (port : Int) -> (user : String) -> (password : String) -> (database : String) -> PGConfig
-mkPGConfig host port user password database = MkPGConfig host port user password database Nothing Nothing False
+mkPGConfig host port user password database = MkPGConfig host port user password database Nothing Nothing False Nothing
 
 public export
 record DB where

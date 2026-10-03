@@ -13,7 +13,8 @@ with tempfile.TemporaryDirectory(prefix='flux-pg-tls-', dir='/tmp') as temporary
     certs = Path(temporary)
     subprocess.run(['openssl', 'req', '-x509', '-newkey', 'rsa:2048', '-nodes',
                     '-keyout', str(certs / 'server.key'), '-out', str(certs / 'server.crt'),
-                    '-days', '1', '-subj', '/CN=localhost'], check=True, timeout=20,
+                    '-days', '1', '-subj', '/CN=localhost',
+                    '-addext', 'subjectAltName=DNS:localhost,IP:127.0.0.1'], check=True, timeout=20,
                    stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
     command = '''set -eu
 mkdir -p /tmp/tls
@@ -31,7 +32,7 @@ exec docker-entrypoint.sh postgres -c ssl=on -c ssl_cert_file=/tmp/tls/server.cr
                        check=True, timeout=30, stdout=subprocess.DEVNULL)
         created = True
         for _ in range(60):
-            ready = subprocess.run(['docker', 'exec', name, 'pg_isready', '-U', 'testuser', '-d', 'testdb'],
+            ready = subprocess.run(['docker', 'exec', name, 'pg_isready', '-h', '127.0.0.1', '-U', 'testuser', '-d', 'testdb'],
                                    timeout=5, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             if ready.returncode == 0:
                 break
@@ -41,10 +42,10 @@ exec docker-entrypoint.sh postgres -c ssl=on -c ssl_cert_file=/tmp/tls/server.cr
         address = subprocess.check_output(['docker', 'port', name, '5432/tcp'], text=True, timeout=5).strip()
         port = address.rsplit(':', 1)[1]
         app = ROOT / 'test/build/exec/idris2-pg-tls-deadline-test_app'
-        env = dict(os.environ, PG_TEST_PORT=port, IDRIS2_INC_SRC=str(app),
+        env = dict(os.environ, PG_TEST_PORT=port, PG_TEST_CA_FILE=str(certs / 'server.crt'), IDRIS2_INC_SRC=str(app),
                    LD_LIBRARY_PATH=str(app), DYLD_LIBRARY_PATH=str(app))
         subprocess.run([str(app / 'idris2-pg-tls-deadline-test.so')], env=env, check=True, timeout=90)
     finally:
         if created:
-            subprocess.run(['docker', 'rm', '-f', name], timeout=15, check=False,
-                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(['docker', 'rm', '-f', '-v', name], timeout=15, check=True,
+                           stdout=subprocess.DEVNULL)

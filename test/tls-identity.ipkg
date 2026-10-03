@@ -1,0 +1,6 @@
+package idris2-pg-tls-identity-test
+version = 0.1.0
+depends = idris2-pg
+sourcedir = "src"
+main = TLSIdentityTests
+executable = idris2-pg-tls-identity-test

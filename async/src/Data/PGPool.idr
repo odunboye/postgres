@@ -219,7 +219,7 @@ acquireIO pool ticket deadline = do
               else pure (Right db)
 
 ||| Synchronous scoped borrowing for IO repositories. Call this through
-||| blocking (or Nebula.PG.dbIO) from an event loop. The same FIFO queue and
+||| blocking (or Flux.DB.PG.dbIO) from an event loop. The same FIFO queue and
 ||| connection limits are shared with withConnection's task interface.
 export
 withConnectionIO : Pool -> (DB -> IO (Either PGError a)) -> IO (Either PGError a)

@@ -18,7 +18,7 @@ invalidate db = do
   closed <- readIORef db.unusable
   unless closed $ do
     writeIORef db.unusable True
-    ignore (close (MkConnected (socket (conn db))))
+    closePGConnection (conn db)
 
 withReadTimeout : DB -> IO (Either PGError a) -> IO (Either PGError a)
 withReadTimeout db action = do
@@ -37,14 +37,12 @@ withReadTimeout db action = do
         _ => pure result
 
 closeConn : PGConnection Connected -> IO ()
-closeConn c = do
-  _ <- close (MkConnected (socket c))
-  pure ()
+closeConn = closePGConnection
 
 public export
 connectDBImpl : PGConfig -> IO (Either PGError DB)
 connectDBImpl cfg = do
-  conn <- connectPG (host cfg) (port cfg) (useTLS cfg)
+  conn <- connectPG (host cfg) (port cfg) (useTLS cfg) (tlsCAFile cfg)
   case conn of
        Left err => pure (Left (ConnectionError err))
        (Right pgConn) => do
@@ -203,6 +201,15 @@ execCommand db stmt params = do
   result <- runQuery db stmt params False
   pure (result >>= singleResult >>= collectErrors >>= \qr => Right (fromMaybe "" (commandTag qr)))
 
+||| Execute exactly one command through Parse/Bind/Execute, even without
+||| parameters. PostgreSQL rejects SQL batches at Parse, before any statement
+||| executes. Use this when rejection must precede side effects (migrations).
+public export
+execCommandPrepared : DB -> String -> List (Maybe String) -> IO (Either PGError String)
+execCommandPrepared db stmt params = do
+  result <- execParams db stmt params False
+  pure (result >>= singleResult >>= collectErrors >>= \qr => Right (fromMaybe "" (commandTag qr)))
+
 ||| Run a SELECT and return the decoded rows, in text format (the default -
 ||| see "Value decoding" for what this covers).
 public export
@@ -349,12 +356,12 @@ public export
 cancelQuery : DB -> IO (Either PGError ())
 cancelQuery db = case map backendKey (result db) of
   Just (Just bk) => withConnectTimeout (cfg db) $ do
-    conn <- connectPG (host (cfg db)) (port (cfg db)) (useTLS (cfg db))
+    conn <- connectPG (host (cfg db)) (port (cfg db)) (useTLS (cfg db)) (tlsCAFile (cfg db))
     case conn of
          Left err => pure (Left (ConnectionError err))
          Right cancelConn => do
            sendRes <- pgSend cancelConn (encode (CancelRequest (pid bk) (secret bk)))
-           _ <- close (MkConnected (socket cancelConn))
+           closePGConnection cancelConn
            case sendRes of
                 Left err => pure (Left (ConnectionError err))
                 Right () => pure (Right ())

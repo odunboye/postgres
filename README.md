@@ -2,7 +2,12 @@
 
 A PostgreSQL client for Idris2, implemented from scratch against the
 [Postgres wire protocol](https://www.postgresql.org/docs/current/protocol.html)
-over raw TCP sockets — no `libpq`, no FFI.
+over TCP sockets — no `libpq`. Deadline-aware native transport uses a small C
+bridge; authenticated TLS uses OpenSSL 3 through that same bridge. Build
+prerequisites: a C11 compiler, `make`, `pkg-config`, and OpenSSL 3
+headers/libraries (`brew install openssl@3 pkg-config` on macOS;
+`libssl-dev pkg-config` on Debian). Deployments must also provide OpenSSL 3
+shared libraries and their intended CA trust.
 
 ## Project goals
 
@@ -80,13 +85,21 @@ See `test/src/Main.idr` for a fuller worked example (CRUD, transactions,
 `execMulti`, `cancelQuery`, array/date/timestamp/numeric values, NULL
 handling).
 
+For commands that must reject SQL batches **before any side effect**, use
+`execCommandPrepared db sql params`. It always uses Parse/Bind/Execute, including
+when `params` is empty. `execCommand`/`queryRows` retain their simple-protocol
+fast path for zero-parameter calls; their result-count check is not a
+pre-execution SQL safety boundary. Callers that need this guarantee (a
+migration runner, say) should use the strict prepared-command API.
+
 This library is deliberately just the wire-protocol client: connect/query/
 execute, the value getters below, transactions, LISTEN/NOTIFY, COPY, and
 TLS - nothing that maps a `Row` onto an application record type. That
 layer - `Row`<->record derivation, generated CRUD, a typed query builder -
-lives in [nebula](https://github.com/odunboye/nebula), built on top of
-this client (and meant to grow support for other DB clients later, not
-stay idris2-pg-specific forever).
+belongs in a separate library built on top of this client (and meant to
+grow support for other DB clients later, not stay idris2-pg-specific
+forever). Flux DB (part of the [Flux](https://github.com/odunboye/flux)
+platform) is one such consumer.
 
 ### Value decoding
 
@@ -140,7 +153,9 @@ return, as required by the [Chez foreign interface](https://cisco.github.io/Chez
 ### Exclusive connection pooling
 
 The optional `async/idris2-pg-async.ipkg` package exports `Data.PGPool` for
-`flux-async`. Defaults are 8 connections, 128 queued acquirers, and a 5-second
+`flux-async`'s task scheduler (vendored into Flux itself as `flux-runtime`;
+not yet published as its own standalone repo). Defaults are 8 connections,
+128 queued acquirers, and a 5-second
 acquisition deadline. Connections are opened lazily. Missing transport
 limits become 5 seconds for connection setup and 30 seconds per operation.
 Cold connection setup is serialized per pool to avoid concurrent SCRAM
@@ -154,19 +169,45 @@ Timed-out connections and connections left in a transaction are discarded.
 `closePool` rejects new leases and closes idle connections; active leases
 close when their callback finishes. `poolClosed` observes completion.
 
-`Nebula.Pool.pooledRepository` reuses this pattern for CRUD; use
-`withPooledTransactionRepos` when several repositories must share a single
-transactional lease.
+Consumers building a repository layer on top (e.g. `Flux.DB.Pool.pooledRepository`)
+can reuse this pattern for CRUD; use `withPooledTransactionRepos`-style helpers
+when several repositories must share a single transactional lease.
 
 ### TLS
 
-Set `PGConfig.useTLS = True` (via `MkPGConfig` or record update on a
-`mkPGConfig`-built config) to require Postgres's SSLRequest negotiation and
-a TLS 1.3 handshake before the startup message goes out; `connectDB` fails
-outright if the server doesn't support SSL (there's no "prefer" fallback
-to plaintext).
+`useTLS = True` (via `MkPGConfig` or a record update on a `mkPGConfig`-built
+config) **requires authenticated TLS 1.3** before sending the startup or
+authentication messages. OpenSSL 3 validates the certificate chain, validity,
+server purpose, SAN hostname/IP, `CertificateVerify` signature and `Finished`.
+There is no encrypted-but-unverified mode, TLS 1.2 fallback, or plaintext
+fallback — `connectDB` fails outright if verification doesn't pass.
 
-This is a from-scratch TLS 1.3 client (`Network.TLS`), the same philosophy
+```idris
+let cfg : PGConfig
+    cfg = { useTLS := True,
+            tlsCAFile := Just "/run/secrets/postgres-ca.pem",
+            connectTimeoutMs := Just 5000, readTimeoutMs := Just 2000 } $
+      mkPGConfig "db.example.com" 5432 "app" password "tasks"
+```
+
+`tlsCAFile = Nothing` uses OpenSSL's default trust paths, including
+`SSL_CERT_FILE`/`SSL_CERT_DIR` environment overrides. `Just path` loads
+**only** that PEM CA file, with no system-trust fallback. A missing/invalid
+file fails closed; empty paths and NUL-containing paths/hosts are rejected.
+A CA file with `useTLS = False` is an error. `mkPGConfig` still defaults to
+plaintext for local development: **explicitly enable TLS for
+remote/production connections.** The driver does not itself read libpq
+environment variables.
+
+Identity always comes from `PGConfig.host`: DNS names use SAN dNSName and
+SNI; numeric addresses require SAN iPAddress and send no SNI.
+Common-name-only certs and partial-label wildcards are rejected. Provision
+SAN certificates and the proper trust bundle rather than bypassing
+verification. Chain depth is capped at 8 intermediates and certificate-list
+size at 256 KiB. No client certificate/mTLS or automatic online revocation
+checking is provided.
+
+The handshake itself (`Network.TLS`) is from-scratch, the same philosophy
 as everything else here: X25519 and P-256 ECDHE, ChaCha20-Poly1305, and
 the RFC 8446 key schedule (HKDF-Extract/Expand-Label) are all hand-written
 and verified against IETF/reference-library test vectors — see the
@@ -178,23 +219,42 @@ at all (a different OpenSSL key-machinery path) - offering only X25519
 gets a `handshake failure` alert from a stock server, confirmed by testing
 even bare `openssl s_client -groups x25519` against one. `Crypto.Curve25519`
 is kept as a complete, independently-tested module even though the
-handshake doesn't use it today.
+handshake doesn't use it today. Certificate chain validation, signature
+checking and X.509 parsing are done by OpenSSL, not the hand-written Idris
+TLS record/handshake layer; the field arithmetic in `Crypto.P256` isn't
+constant-time, so it doesn't defend against a timing side-channel from a
+co-located attacker.
 
-**The one significant gap: no certificate signature verification.**
-`CertificateVerify` is parsed and folded into the transcript hash (the
-handshake can't complete without it), but its signature is never checked,
-and `Certificate`'s contents are never inspected. That means the
-connection is genuinely encrypted - safe from passive eavesdropping - but
-the server's identity isn't authenticated, so an active
-machine-in-the-middle presenting its own certificate wouldn't be detected.
-Real X.509 parsing plus RSA/ECDSA signature verification is a large
-enough sub-project (ASN.1 DER, a trust store) that it's a documented
-follow-up rather than a blocker here. Everything else - the ECDHE key
-exchange (peer P-256 points are validated to lie on the curve before use),
-the key schedule, and the record encryption - is as strong as a
-certificate-verifying client's, with one caveat: the field arithmetic
-isn't constant-time (see `Crypto.P256`'s module comment), so it doesn't
-defend against a timing side-channel from a co-located attacker.
+The same thread-owned monotonic deadline spans TCP, SSLRequest, TLS and
+startup; record I/O uses the existing nonblocking/poll transport.
+Cancellation connections independently revalidate identity. Timeouts poison
+the main connection and free TLS state before closing the fd; cleanup
+never waits for a peer close_notify. As with DNS/CPU work, trust-file
+access and cryptographic work are synchronous, not forcibly preempted:
+elapsed deadlines are checked rather than abandoning a worker. Configure
+finite connect/read deadlines for production.
+
+This was a security-breaking cutover from an earlier, encrypted-but-unverified
+implementation: `MkPGConfig` has a `Maybe String` CA-file field; prefer
+`mkPGConfig` plus record updates. Low-level `connectPG`/`tlsClientHandshake`
+require trust/identity arguments. Self-signed/CN-only servers accepted by
+the former implementation will fail now.
+
+Authenticated integration test (needs a disposable database; see
+"Running the tests" below):
+
+```sh
+cd test
+pack build tls-identity.ipkg
+python3 tls_identity_test.py
+```
+
+This exercises trusted DNS/IP chains, SNI, untrusted/incomplete/expired/future/
+wrong-purpose/mismatched certificates, SAN rules, missing/exclusive CA files,
+downgrade refusal, deadlines, SCRAM, large payloads, cancellation and
+connection cleanup. `--native-only` runs just the C bridge peer matrix
+without an Idris compiler or database; it is not a substitute for the full
+integration suite.
 
 ### Errors
 
@@ -320,11 +380,12 @@ live testing as described here.
       deadline-aware native socket waits with no abandoned query threads;
       see "Timeouts" above for exactly what that does and
       doesn't bound.
-- [x] TLS 1.3 (`PGConfig.useTLS`) — the full handshake and record layer,
-      built entirely from scratch: X25519 *and* P-256 ECDHE
-      (`Crypto.Curve25519`/`Crypto.P256`), ChaCha20-Poly1305
-      (`Crypto.ChaCha20`/`Crypto.Poly1305`/`Crypto.ChaCha20Poly1305`), the
-      HKDF-based key schedule (`Crypto.HKDF`), and the handshake state
-      machine (`Network.TLS`/`Network.TLSHandshake`/`Network.TLSWire`).
-      See "TLS" above for what this does and doesn't protect against, and
-      why P-256 (not X25519) is what's actually negotiated on the wire.
+- [x] Authenticated TLS 1.3 (`PGConfig.useTLS`) — handshake and record layer
+      built from scratch (X25519 *and* P-256 ECDHE via
+      `Crypto.Curve25519`/`Crypto.P256`, ChaCha20-Poly1305 via
+      `Crypto.ChaCha20`/`Crypto.Poly1305`/`Crypto.ChaCha20Poly1305`, the
+      HKDF-based key schedule via `Crypto.HKDF`, and the handshake state
+      machine via `Network.TLS`/`Network.TLSHandshake`/`Network.TLSWire`),
+      with certificate chain/SAN/hostname verification via OpenSSL 3. See
+      "TLS" above for exactly what's verified and why P-256 (not X25519)
+      is what's actually negotiated on the wire.

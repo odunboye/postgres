@@ -256,8 +256,10 @@ sslRequestBytes : Bytes
 sslRequestBytes = encodeInt32 8 ++ encodeInt32 80877103
 
 public export
-connectPG : String -> Int -> (wantTLS : Bool) -> IO (Either String (PGConnection Connected))
-connectPG host port wantTLS = do
+connectPG : String -> Int -> (wantTLS : Bool) -> Maybe String -> IO (Either String (PGConnection Connected))
+connectPG host port wantTLS caFile = do
+  False <- pure ((not wantTLS && isJust caFile) || elem '\0' (unpack host))
+    | True => pure (Left "TLS configuration requires useTLS and a valid host")
   sockRes <- getSock
   case sockRes of
     Left _ => pure (Left "could not create socket")
@@ -290,7 +292,7 @@ connectPG host port wantTLS = do
                     Network.Socket.close socket
                     pure (Left ("could not read SSLRequest response: " ++ err))
                   Right [0x53] => do -- 'S': server will speak TLS from here
-                    tlsRes <- tlsClientHandshake socket
+                    tlsRes <- tlsClientHandshake socket host caFile
                     case tlsRes of
                          Left err => do
                            Network.Socket.close socket
@@ -305,6 +307,15 @@ connectPG host port wantTLS = do
                     Network.Socket.close socket
                     pure (Left "unexpected response to SSLRequest")
 
+
+||| Release TLS before closing its owned socket, on every connection exit path.
+public export
+closePGConnection : PGConnection Connected -> IO ()
+closePGConnection conn = do
+  session <- readIORef (tls conn)
+  writeIORef (tls conn) Nothing
+  traverse_ tlsClose session
+  Network.Socket.close (socket conn)
 
 public export
 sendStartup : PGConnection Connected -> List Bits8 -> IO (Maybe (PGConnection StartupSent))
